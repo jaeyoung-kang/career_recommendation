@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 def preprocess_school(data):
@@ -44,7 +45,7 @@ def preprocess_certificate(data):
     data['index'] = data.index 
     nan_index = []
     val_index = []
-    certificate = df[['index', 'certificate']]
+    certificate = data[['index', 'certificate']]
     for i in range(0, len(data)):
         if type(certificate['certificate'][i]) != str:
             nan_index.append(i)
