@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 
 
 def strip(series):
@@ -129,13 +130,11 @@ def preprocess_certificate(data):
 
 
 def preprocess_award(data):
-    lst=[]
-    for i in data['award']:
-        lst.append(i)
-    lst_1=[]
-    for i in lst:
-        lst_1.append(str(i).replace('\n','').replace(' ',''))
-    return data['award']
+    award = data['award']
+    regex = re.compile('[0-9]{4}년[0-9]{0,1}월')
+    award = award.str.replace('\n','').replace(' ','')
+    award = award.apply(regex.findall)
+    return pd.concat([data['id'], award], axis=1)
 
 
 def preprocess_career(df):
