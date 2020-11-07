@@ -2,23 +2,27 @@ import pandas as pd
 import numpy as np
 
 
+def strip(series):
+    series = series.str.strip('\r\n\s ')
+    return series
+
+def split(series):
+    series = series.str.split('\r?\n,?\s+')  # 공백문자 제거
+    return series
+
 def preprocess_school(data):
-    data = data.fillna('')
-    data['school'] = data['school'].str.split('\r?\n\s+') # 공백문자 제거
-    for i in range(len(data['school'])):
-        if data['school'].iloc[i] != []:
-            data['school'].iloc[i].pop(0) # 맨 앞 '학력' 지우기
-    return data['school']
+    school = data['school']
+    school = school.str.replace('학력', '')
+    school = split(strip(school))
+    return pd.concat([data['id'], school], axis=1)
 
 
 def preprocess_language(data):
-    data = data.fillna('') 
-    data['language'] = data['language'].str.split('\r?\n\s+') # 공백문자 제거
-    for i in range(len(data['language'])):
-    if data['language'].iloc[i] != []:
-        data['language'].iloc[i].pop(0) # 맨 앞 '언어' 지우기
+    language = data['language']
+    language = language.str.replace('언어', '')
+    language = split(strip(language))
+    return pd.concat([data['id'], language], axis=1)
 
-    return data['language']
 
 
 def preprocess_skill(data):
