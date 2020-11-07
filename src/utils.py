@@ -6,9 +6,20 @@ def strip(series):
     series = series.str.strip('\r\n\s ')
     return series
 
+
 def split(series):
     series = series.str.split('\r?\n,?\s+')  # 공백문자 제거
     return series
+
+
+def preprocess_basic(data):
+    data = data.drop(['Unnamed: 0', 'name'], axis=1)
+    data = data.drop_duplicates()
+    data = data[data.isna().sum(axis=1) < data.shape[1]]
+    data = data.reset_index(drop=True)
+    data['id'] = data.index
+    return data
+
 
 def preprocess_school(data):
     school = data['school']
