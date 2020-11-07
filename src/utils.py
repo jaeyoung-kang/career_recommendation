@@ -24,25 +24,25 @@ def preprocess_language(data):
     return pd.concat([data['id'], language], axis=1)
 
 
-
 def preprocess_skill(data):
-    data['skills'] = np.nan
-    for i in range(0, data.shape[0]):
-        if pd.isna(data.project[i]):
-            data['skills'][i]=[]
-            pass
-        else:
-            one_person = []
-            n = len(data.project[i].split('    \n      \n        \n          '))
-            for j in range(1,n):
-                get = data.project[i].split('    \n      \n        \n          ')[j].split('\n\n')[0].split('\n, ')
-                if len(get)==1:
-                    pass
-                else:
-                    one_person.extend(get)
+    def get_skills(projects):
+        if isinstance(projects, float):
+            return []
+        all_skill = []
+        for project in projects:
+            skills = project.split('\n\n')[0].split('\n, ')
+            all_skill += skills if len(skills) > 1 else []
+        return all_skill
 
-            data['skills'][i] = one_person
-    return data['skills']
+    project = data['project']
+    project = project.str.replace('프로젝트', '')
+    project = strip(project)
+
+    project_seperator = '    \n      \n        \n          '
+    project = project.str.split(project_seperator)
+    skill = project.apply(get_skills)
+    skill.name = 'skill'
+    return pd.concat([data['id'], skill], axis=1)
 
 
 def preprocess_certificate(data):
