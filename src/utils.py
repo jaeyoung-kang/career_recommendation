@@ -58,75 +58,24 @@ def preprocess_skill(data):
 
 
 def preprocess_certificate(data):
-    data['index'] = data.index 
-    nan_index = []
-    val_index = []
-    certificate = data[['index', 'certificate']]
-    for i in range(0, len(data)):
-        if type(certificate['certificate'][i]) != str:
-            nan_index.append(i)
-        else:
-            val_index.append(i)
-    cert_val_index = certificate['index'][val_index]
-    cert_val_cert = certificate['certificate'][certificate['index'][val_index]]
-    cert_val = pd.concat([cert_val_index, cert_val_cert], axis=1)
-    for i in cert_val['index']:
-        tmp = cert_val['certificate'][i]
-        tmp2 = tmp.replace("\r\n", "\n")
-        cert_val['certificate'][i] = tmp2
+    def get_certificates(items):
+        if isinstance(items, float):
+            return []
+        certificates = []
+        for item in items:
+            if len(item) > 0:
+                item = item.strip()
+                certificates += [item.split('\n')]
+        return certificates
 
-    for i in cert_val2['index']:
-        tmp = cert_val2['certificate'][i]
-        tmp2 = tmp.replace(" ", '')
-        cert_val2['certificate'][i] = tmp2
+    certificate = data['certificate']
+    certificate = certificate.str.replace('자격증', '')
+    certificate = strip(certificate)
 
-    for i in cert_val2['index']:
-        tmp = cert_val2['certificate'][i]
-        tmp2 = tmp.replace("자격증\n\n\n", '')
-        cert_val2['certificate'][i] = tmp2
-
-    new_df = pd.DataFrame(columns=['index', 'cert1', 'cert2', 'cert3', 'cert4'])
-
-    len_list = []
-    for i in cert_val2['index']:
-        tmp = cert_val2['certificate'][i]
-        tmp2 = tmp.split('\n\n\n\n')
-        length = len(tmp2)
-        for single_cert in tmp2:
-            tmp3 = single_cert.replace('\n', ' ')
-            result = tmp3.split(' ')
-            new_result = [item for item in result if item != '']
-            k = len(new_result)
-            if k == 1:
-                final_result = [i] + new_result + ['dummy'] + ['dummy'] + ['dummy']
-                new_df = new_df.append({'index' : final_result[0],
-                                    'cert1' : final_result[1],
-                                    'cert2' : final_result[2],
-                                    'cert3' : final_result[3],
-                                    'cert4' : final_result[4]}, ignore_index = True)
-            elif k == 2:
-                final_result = [i] + new_result + ['dummy'] + ['dummy']
-                new_df = new_df.append({'index' : final_result[0],
-                                    'cert1' : final_result[1],
-                                    'cert2' : final_result[2],
-                                    'cert3' : final_result[3],
-                                    'cert4' : final_result[4]}, ignore_index = True)
-            elif k == 3:
-                final_result = [i] + new_result + ['dummy']
-                new_df = new_df.append({'index' : final_result[0],
-                                    'cert1' : final_result[1],
-                                    'cert2' : final_result[2],
-                                    'cert3' : final_result[3],
-                                    'cert4' : final_result[4]}, ignore_index = True)            
-            elif k >= 4:
-                final_result = [i] + new_result[0:3]
-                final_result.append('-'.join(new_result[3:]))
-                new_df = new_df.append({'index' : final_result[0],
-                                    'cert1' : final_result[1],
-                                    'cert2' : final_result[2],
-                                    'cert3' : final_result[3],
-                                    'cert4' : final_result[4]}, ignore_index = True)
-    return new_df
+    certificate_seperator = '\n\n\n\n'
+    certificate = certificate.str.replace(' ', '').str.split(certificate_seperator)
+    certificate = certificate.apply(get_certificates)
+    return pd.concat([data['id'], certificate], axis=1)
 
 
 def preprocess_award(data):
