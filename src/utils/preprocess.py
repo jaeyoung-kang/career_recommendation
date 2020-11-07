@@ -17,9 +17,27 @@ def basic(data):
     data = data.drop(['Unnamed: 0', 'name'], axis=1)
     data = data.drop_duplicates()
     data = data[data.isna().sum(axis=1) < data.shape[1]]
+    data = data.fillna('')
     data = data.reset_index(drop=True)
     data['id'] = data.index
     return data
+
+
+def career(data):
+    def get_career_time(items):
+        if isinstance(items, float):
+            return []
+        career_list = []
+        for i, item in enumerate(items):
+            if re.search('[0-9]{4}년 [0-9]{1,2}월', item):
+                career_list += [(items[i-1], item)]
+        return career_list
+
+    career = data['career']
+    career = career.str.replace('경력', '')
+    career = split(strip(career))
+    career = career.apply(get_career_time)
+    return pd.concat([data['id'], career], axis=1)
 
 
 def school(data):
@@ -27,13 +45,6 @@ def school(data):
     school = school.str.replace('학력', '')
     school = split(strip(school))
     return pd.concat([data['id'], school], axis=1)
-
-
-def language(data):
-    language = data['language']
-    language = language.str.replace('언어', '')
-    language = split(strip(language))
-    return pd.concat([data['id'], language], axis=1)
 
 
 def skill(data):
@@ -57,6 +68,21 @@ def skill(data):
     return pd.concat([data['id'], skill], axis=1)
 
 
+def language(data):
+    language = data['language']
+    language = language.str.replace('언어', '')
+    language = split(strip(language))
+    return pd.concat([data['id'], language], axis=1)
+
+
+def award(data):
+    award = data['award']
+    regex = re.compile('[0-9]{4}년[0-9]{0,1}월')
+    award = award.str.replace('\n','').replace(' ','')
+    award = award.apply(regex.findall)
+    return pd.concat([data['id'], award], axis=1)
+
+
 def certificate(data):
     def get_certificates(items):
         if isinstance(items, float):
@@ -76,28 +102,3 @@ def certificate(data):
     certificate = certificate.str.replace(' ', '').str.split(certificate_seperator)
     certificate = certificate.apply(get_certificates)
     return pd.concat([data['id'], certificate], axis=1)
-
-
-def award(data):
-    award = data['award']
-    regex = re.compile('[0-9]{4}년[0-9]{0,1}월')
-    award = award.str.replace('\n','').replace(' ','')
-    award = award.apply(regex.findall)
-    return pd.concat([data['id'], award], axis=1)
-
-
-def career(data):
-    def get_career_time(items):
-        if isinstance(items, float):
-            return []
-        career_list = []
-        for i, item in enumerate(items):
-            if re.search('[0-9]{4}년 [0-9]{1,2}월', item):
-                career_list += [(items[i-1], item)]
-        return career_list
-
-    career = data['career']
-    career = career.str.replace('경력', '')
-    career = split(strip(career))
-    career = career.apply(get_career_time)
-    return pd.concat([data['id'], career], axis=1)
