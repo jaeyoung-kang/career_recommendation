@@ -137,25 +137,18 @@ def preprocess_award(data):
     return pd.concat([data['id'], award], axis=1)
 
 
-def preprocess_career(df):
-    df = df.drop(['school','project','language','award','certificate'],axis=1)
-    df = df.dropna()
-    df= df.reset_index(drop=True)
+def preprocess_career(data):
+    def get_career_time(items):
+        if isinstance(items, float):
+            return []
+        career_list = []
+        for i, item in enumerate(items):
+            if re.search('[0-9]{4}년 [0-9]{1,2}월', item):
+                career_list += [(items[i-1], item)]
+        return career_list
 
-    data = pd.DataFrame(columns=['career'])
-    for k in range(len(df['career'][0:10])):
-        print(k)
-        cr = list(map(lambda x : x.replace(' ',''), df['career'][k].split('\n'))) 
-        crd= []
-        for i in range(2,len(cr)):
-            if len(cr[i]) > 0:
-                crd.append(cr[i])
-        cd = pd.DataFrame(crd,columns=['career'])
-        cdd = cd.loc[cd[cd['career'].str.contains('년','월',na=False)].index-1]
-        cddd = cd.loc[cd[cd['career'].str.contains('년','월',na=False)].index]
-        cddd.columns=['time']
-        unna = pd.DataFrame(np.full((len(cd.loc[cd[cd['career'].str.contains('년','월',na=False)].index-1]), 1), df['Unnamed: 0'][k]),columns=['Unnamed: 0'])
-        cd = pd.concat([cdd.reset_index(drop=True),unna,cddd.reset_index(drop=True)],axis=1)
-        data = data.append(cd)
-    data.columns = ['career','ID','time']
-    return data
+    career = data['career']
+    career = career.str.replace('경력', '')
+    career = split(strip(career))
+    career = career.apply(get_career_time)
+    return pd.concat([data['id'], career], axis=1)
