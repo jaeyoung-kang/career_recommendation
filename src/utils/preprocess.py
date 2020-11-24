@@ -13,6 +13,25 @@ def split(series):
     return series
 
 
+def explode(series, cols):
+    df = pd.DataFrame(series.explode().dropna())
+    df.columns = cols
+    df = df.reset_index().rename({'index': 'id'}, axis=1)
+    return df
+
+
+def clean_str_df(df):
+    oject_columns = df.select_dtypes('object').columns
+    for col in oject_columns:
+        df[col] = df[col].str.strip()
+    return df
+        
+
+def get_top_list(series, th):
+    value_counts = series.value_counts()
+    return value_counts[value_counts > th].index
+
+
 def basic(data):
     data = data.drop(['Unnamed: 0', 'name'], axis=1)
     data = data.drop_duplicates()
