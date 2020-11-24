@@ -62,8 +62,101 @@ def career(data):
 def school(data):
     school = data['school']
     school = school.str.replace('학력', '')
-    school = split(strip(school))
-    return pd.concat([data['id'], school], axis=1)
+
+    school = split_school_list(school)
+    school = one_school_df(school)
+
+    school = keep_useful_school(school)
+    school = delete_strange_school(school)
+
+    school_df = split_school_info(school)
+    school_df = split_school_major(school_df)
+    school_df = split_school_date(school_df)
+    school_df = clean_str_df(school_df)
+    return school_df
+
+
+def split_school_list(school):
+    def split_join_school(school_info):
+        return '\n'.join(school_info.split('\n')[:3])
+    # 공백원소 제거
+    school = strip(school)
+    school = school.str.split('(\n +){3,}')
+    school = school.apply(lambda x: list(filter(str.strip, x)))
+    # 3번째 new_line 이후 정보 제거
+    school = school.apply(lambda x: list(map(split_join_school, x)))
+    return school
+
+
+def one_school_df(school):
+    school = pd.DataFrame(school.explode(), columns=['school'])
+    school = school.dropna()
+    school = school.reset_index().rename({'index': 'id'}, axis=1)
+    return school
+
+
+def keep_useful_school(school):
+    # 졸업, 휴학, 중퇴, 재학이 있는 학력만 남김
+    def check_state(shool_info):
+        states = ['졸업', '휴학', '중퇴', '재학']
+        for state in states:
+            if state in shool_info:
+                return True
+        return False
+    state = school['school'].apply(check_state)
+    return school[state].reset_index(drop=True)
+    
+
+def delete_strange_school(school):
+    # 고등학교 학력 제거
+    # 프로젝트명에 "졸업"이 자주 들어감, 프로젝트 들어간 부분 제거
+    def check_state(shool_info):
+        strange_states = ["고등", "젝트"]
+        for state in strange_states:
+            if state in shool_info:
+                return False
+        return True
+    state = school['school'].apply(check_state)
+    return school[state].reset_index(drop=True)
+
+
+def split_school_info(school):
+    school_df = pd.DataFrame(school['school'].str.split('\n').to_list())
+    school_df.columns=['school_name', 'school_major', 'school_date']
+    school_df = pd.concat([school['id'], school_df], axis=1)
+    
+    school_df['school_major'] = school_df['school_major'].str.split(',')
+    school_df = school_df.explode('school_major')
+    return school_df.reset_index(drop=True)
+
+
+def split_school_major(school):
+    school = school.copy()
+    col_name = 'school_major'
+    school[col_name] = school[col_name].fillna('')
+    school[col_name] = school[col_name].str.split()
+    
+    school['school_major_name'] = school[col_name].apply(lambda x: ' '.join(x[:-1]))
+    school['school_major_state'] = school[col_name].apply(lambda x: x[-1] if len(x) > 0 else None)
+
+    school['school_major_state'] = school['school_major_state'].str.replace(')', '').str.split('(')
+
+    school['school_major_level'] = school['school_major_state'].apply(lambda x: x[1] if isinstance(x,list) and len(x)> 1 else None)
+    school['school_major_state'] = school['school_major_state'].apply(lambda x: x[0] if isinstance(x,list) else None)
+    return school.drop(col_name, axis=1)
+
+
+def split_school_date(school):
+    school = school.copy()
+    school['school_date'] = school['school_date'].fillna('')
+    school['school_date'] = school['school_date'].str.replace('-', '').str.split()
+    
+    school_date = pd.DataFrame(school['school_date'].to_list()).iloc[:, :3]
+    school_date.columns = ['school_start', 'school_end', 'school_state']
+
+    school_date['school_start'] = school_date['school_start'].str.extract('(\d+)')
+    school_date['school_end'] = school_date['school_end'].str.extract('(\d+)')
+    return pd.concat([school.drop('school_date', axis=1), school_date], axis=1)
 
 
 def skill(data):
