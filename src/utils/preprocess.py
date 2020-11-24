@@ -187,10 +187,24 @@ def skill(data, top_th=10):
     skill.loc[~skill['skill'].isin(top_skills), 'skill'] = None
     return skill
 
+
+def language(data, top_th=5):
     language = data['language']
     language = language.str.replace('언어', '')
     language = split(strip(language))
-    return pd.concat([data['id'], language], axis=1)
+
+    language = language.apply(lambda x: [x[i * 2: i * 2 + 2] for i in range(len(x)//2)])
+
+    language = explode(language, cols=['language'])
+
+    lan = pd.DataFrame(language['language'].tolist())
+    lan.columns = ['language_name', 'language_lavel']
+    language = pd.concat([language['id'], lan], axis=1)
+    language = clean_str_df(language)
+
+    top_language = get_top_list(language['language_name'], th=top_th)
+    language = language[language['language_name'].isin(top_language)]
+    return language
 
 
 def award(data):
