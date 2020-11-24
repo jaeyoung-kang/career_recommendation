@@ -185,7 +185,7 @@ def skill(data, top_th=10):
 
     top_skills = get_top_list(skill['skill'], th=top_th)
     skill.loc[~skill['skill'].isin(top_skills), 'skill'] = None
-    return skill
+    return skill.dropna(thresh=2)
 
 
 def language(data, top_th=5):
