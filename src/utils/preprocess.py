@@ -209,13 +209,14 @@ def language(data, top_th=5):
 
 def award(data):
     award = data['award']
-    regex = re.compile('[0-9]{4}년[0-9]{0,1}월')
-    award = award.str.replace('\n','').replace(' ','')
+    regex = re.compile('[0-9]{4}년[0-9]{1,2}월')
+    award = award.str.replace('\n','').str.replace(' ','')
     award = award.apply(regex.findall)
-    return pd.concat([data['id'], award], axis=1)
+
+    award = explode(award, cols=['award'])
+    return award
 
 
-def certificate(data):
     def get_certificates(items):
         if isinstance(items, float):
             return []
