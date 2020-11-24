@@ -159,7 +159,7 @@ def split_school_date(school):
     return pd.concat([school.drop('school_date', axis=1), school_date], axis=1)
 
 
-def skill(data):
+def skill(data, top_th=10):
     def get_skills(projects):
         if isinstance(projects, float):
             return []
@@ -176,11 +176,17 @@ def skill(data):
     project_seperator = '    \n      \n        \n          '
     project = project.str.split(project_seperator)
     skill = project.apply(get_skills)
-    skill.name = 'skill'
-    return pd.concat([data['id'], skill], axis=1)
 
+    skill = explode(skill, cols=['skill'])
 
-def language(data):
+    skill['project_time'] = skill['skill'].str.findall('\d\d\d\d년 \d월')
+    skill['project_time'] = skill['project_time'].apply(lambda x: x[-1] if len(x) > 0 else None)
+    skill = clean_str_df(skill)
+
+    top_skills = get_top_list(skill['skill'], th=top_th)
+    skill.loc[~skill['skill'].isin(top_skills), 'skill'] = None
+    return skill
+
     language = data['language']
     language = language.str.replace('언어', '')
     language = split(strip(language))
