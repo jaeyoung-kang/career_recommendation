@@ -194,7 +194,7 @@ def language(data, top_th=5):
     language = split(strip(language))
 
     language = language.apply(lambda x: [x[i * 2: i * 2 + 2] for i in range(len(x)//2)])
-
+    
     language = explode(language, cols=['language'])
 
     lan = pd.DataFrame(language['language'].tolist())
@@ -217,6 +217,7 @@ def award(data):
     return award
 
 
+def certificate(data, top_th=10):
     def get_certificates(items):
         if isinstance(items, float):
             return []
@@ -234,4 +235,17 @@ def award(data):
     certificate_seperator = '\n\n\n\n'
     certificate = certificate.str.replace(' ', '').str.split(certificate_seperator)
     certificate = certificate.apply(get_certificates)
-    return pd.concat([data['id'], certificate], axis=1)
+
+    certificate = explode(certificate, cols=['certificate'])
+    certificate['certificate'] = certificate['certificate'].apply(lambda x: list(filter(str.strip, x)))
+
+    cer = pd.DataFrame(certificate['certificate'].tolist()).iloc[:, :4]
+    cer.columns = ['certificate_name', 'certificate_agency', 'certificate_time', 'certificate_etc']
+    cer['certificate_time'] = cer['certificate_time'].fillna('').str.findall('\d\d\d\d년\d월')
+    cer['certificate_time']  = cer['certificate_time'] .apply(lambda x: x[-1] if len(x) > 0 else None)
+    certificate = pd.concat([certificate[['id']], cer], axis=1)
+    certificate = clean_str_df(certificate)
+
+    top_certificate = get_top_list(certificate['certificate_name'], th=top_th)
+    certificate = certificate[certificate['certificate_name'].isin(top_certificate)]
+    return certificate.drop(['certificate_agency', 'certificate_etc'], axis=1)
