@@ -5,10 +5,11 @@ def make_binary_target(
     data,
     target_col,
     positive_ratio=0.5,
+    sep = ','
 ):
     all_target_col = 'all_' + target_col
-    data[all_target_col] = '/'.join(list(data[target_col].unique()))
-    data[all_target_col] = data[all_target_col].str.split('/')
+    data[all_target_col] = sep.join(list(data[target_col].unique()))
+    data[all_target_col] = data[all_target_col].str.split(sep)
     data = data.explode(all_target_col)
     data = data.reset_index(drop=True)
 
