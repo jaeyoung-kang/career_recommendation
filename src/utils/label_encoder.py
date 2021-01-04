@@ -16,6 +16,11 @@ class FeatureLabelEncoder:
     def transform(self, *args, **kwargs):
         pass
 
+    def fillna(self, data):
+        data = data.copy()
+        data = data.fillna(data.dtypes.replace({'float64': 0.0, 'O': 'NULL'}))
+        return data
+
     def _add_unknown_value(self, encoder):
         data_type = encoder.classes_.dtype
         if data_type == 'O':
@@ -38,6 +43,7 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
         self._unknowns = None
         
     def fit(self, data, features):
+        data = self.fillna(data.loc[:, features])
         self._encoders = {}
         self._unknowns = {}
         for feature in features:
@@ -52,6 +58,7 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
         data = data.copy()
         for feature, encoder in self._encoders.items():
             unknown = self._unknowns[feature]
+            data[[feature]] = self.fillna(data[[feature]])
             data[feature] = self._change_unknown_value(
                 series=data[feature],
                 encoder=encoder,
