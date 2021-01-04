@@ -14,7 +14,9 @@ def make_binary_target(
 
     data.loc[data[target_col] == data[all_target_col], 'target'] = 1
     data.loc[data[target_col] != data[all_target_col], 'target'] = 0
-    data = data.drop(all_target_col, axis=1)
+    data = data.drop(target_col, axis=1)
+    data = data.rename({all_target_col: target_col}, axis=1)
+    data = data.drop_duplicates()
 
     n_positive = int(data['target'].sum())
     if positive_ratio > 0:
@@ -25,4 +27,4 @@ def make_binary_target(
     positive_index = data[data['target'] == 1].index
     data = data.loc[np.concatenate([positive_index, negative_index])]
 
-    return data.reset_index(drop=True)
+    return data.sort_index().reset_index(drop=True)
