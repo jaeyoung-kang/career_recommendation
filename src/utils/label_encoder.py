@@ -68,6 +68,31 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
 
 
 class VariableLenghthLabelEncoder(FeatureLabelEncoder):
+    '''
+    Example: 
+        ```python
+        variable_encoder = VariableLenghthLabelEncoder()
+        variable_encoder.fit(train[feature].str.split('|'))
+        train[feature] = variable_encoder.transform(train[feature].str.split('|'))
+
+        genres_length = np.array(list(map(len, train[feature])))
+        max_len = max(genres_length)
+
+        train_genres_list = pad_sequences(
+            train[feature], maxlen=max_len, padding='post',
+        )
+
+        varlen_feature_columns = [
+            VarLenSparseFeat(
+                SparseFeat(feature, vocabulary_size=(train_genres_list).max() + 1, embedding_dim=4),
+                maxlen=max_len,
+                combiner='mean',
+            ),
+        ] 
+
+        model_input[feature] = train_genres_list
+        ```
+    '''
     def __init__(self):
         self._encoder = None
         self._unknown = None
