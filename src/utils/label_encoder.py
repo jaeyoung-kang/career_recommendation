@@ -106,6 +106,7 @@ class VariableLenghthLabelEncoder(FeatureLabelEncoder):
     
     def fit(self, series):
         series = series.explode()
+        series = self.fillna(pd.DataFrame(series)).iloc[:, 0]
 
         encoder = LabelEncoder()
         encoder.fit(series)
@@ -117,6 +118,7 @@ class VariableLenghthLabelEncoder(FeatureLabelEncoder):
     def transform(self, series):
         series = series.copy()
         series = series.explode()
+        series = self.fillna(pd.DataFrame(series)).iloc[:, 0]
         index = series.index
         name = series.name
 
