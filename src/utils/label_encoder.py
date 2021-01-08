@@ -16,6 +16,11 @@ class FeatureLabelEncoder:
     def transform(self, *args, **kwargs):
         pass
 
+    def fillna(self, data):
+        data = data.copy()
+        data = data.fillna(data.dtypes.replace({'float64': 0.0, 'O': 'NULL'}))
+        return data
+
     def _add_unknown_value(self, encoder):
         data_type = encoder.classes_.dtype
         if data_type == 'O':
@@ -38,6 +43,7 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
         self._unknowns = None
         
     def fit(self, data, features):
+        data = self.fillna(data.loc[:, features])
         self._encoders = {}
         self._unknowns = {}
         for feature in features:
@@ -52,6 +58,7 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
         data = data.copy()
         for feature, encoder in self._encoders.items():
             unknown = self._unknowns[feature]
+            data[[feature]] = self.fillna(data[[feature]])
             data[feature] = self._change_unknown_value(
                 series=data[feature],
                 encoder=encoder,
@@ -68,12 +75,38 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
 
 
 class VariableLenghthLabelEncoder(FeatureLabelEncoder):
+    '''
+    Example: 
+        ```python
+        variable_encoder = VariableLenghthLabelEncoder()
+        variable_encoder.fit(train[feature].str.split('|'))
+        train[feature] = variable_encoder.transform(train[feature].str.split('|'))
+
+        genres_length = np.array(list(map(len, train[feature])))
+        max_len = max(genres_length)
+
+        train_genres_list = pad_sequences(
+            train[feature], maxlen=max_len, padding='post',
+        )
+
+        varlen_feature_columns = [
+            VarLenSparseFeat(
+                SparseFeat(feature, vocabulary_size=(train_genres_list).max() + 1, embedding_dim=4),
+                maxlen=max_len,
+                combiner='mean',
+            ),
+        ] 
+
+        model_input[feature] = train_genres_list
+        ```
+    '''
     def __init__(self):
         self._encoder = None
         self._unknown = None
     
     def fit(self, series):
         series = series.explode()
+        series = self.fillna(pd.DataFrame(series)).iloc[:, 0]
 
         encoder = LabelEncoder()
         encoder.fit(series)
@@ -85,6 +118,7 @@ class VariableLenghthLabelEncoder(FeatureLabelEncoder):
     def transform(self, series):
         series = series.copy()
         series = series.explode()
+        series = self.fillna(pd.DataFrame(series)).iloc[:, 0]
         index = series.index
         name = series.name
 

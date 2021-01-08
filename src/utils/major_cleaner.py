@@ -1,10 +1,15 @@
 import pandas as pd
+import numpy as np
 import re
 from konlpy.tag import Mecab
 
 
 class MajorCleaner:
-    def __init__(self):
+    def __init__(self, split_section=False):
+        '''
+            split_section: True인 경우 합쳐진 section을 unique 값으로 인식, False인 경우 각 section을 unique로 해서 연결
+        '''
+        self.split_section = split_section
         self.mecab = Mecab()
         self.top_sections = [
             '경영', '컴퓨터', '디자인', '정보', '전자', '산업', '경제', '영어', '언어', '소프트웨어', '시각',
@@ -37,11 +42,11 @@ class MajorCleaner:
             '경영산업정보', '소프트웨어정보',
         ]
 
-    def _select_main_major(self, major_name):
+    def _select_main_major(self, major_name, sep=''):
         sections = self.mecab.nouns(major_name)
         main_sections = [section for section in sections if section in self.top_sections]
         main_sections = sorted(set(main_sections))
-        return ''.join(main_sections)
+        return sep.join(main_sections)
 
     def _transform_one(self, major_name):
         clean_major = self._select_main_major(major_name)
@@ -60,9 +65,15 @@ class MajorCleaner:
         else:
             assert isinstance(majors, pd.Series), 'str or list or pd.Series'
             _majors = majors
-        
-        _clean_majors = _majors.apply(self._transform_one)
-        
+        _na = _majors.isna()
+        _majors = _majors.fillna('')
+
+        if self.split_section:
+            _clean_majors = _majors.apply(lambda x: self._select_main_major(x, sep=','))
+        else:
+            _clean_majors = _majors.apply(self._transform_one)
+
+        _clean_majors[_na] = np.nan
         if isinstance(majors, str):
             return _clean_majors[0]
         elif isinstance(majors, list):
