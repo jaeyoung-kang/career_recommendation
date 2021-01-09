@@ -15,7 +15,7 @@ class DeepFMTrainer:
         self,
         target,
         sparse_features,
-        variable_length_feature=None,
+        variable_length_features=None,
         target_is_sparse=False,
     ):
         self.multi_label_encoder = MultiFeatureLabelEncoder()
@@ -30,12 +30,14 @@ class DeepFMTrainer:
         else:
             self.target_label_encoder = None
 
-        self.variable_length_feature = variable_length_feature
-        if self.variable_length_feature is not None:
-            self.variable_length_label_encoder = VariableLenghthLabelEncoder()
+        self.variable_length_features = variable_length_features
+        if self.variable_length_features is not None:
+            self.variable_length_label_encoders = {}
+            for feat in self.variable_length_features:
+                self.variable_length_label_encoders[feat] = VariableLenghthLabelEncoder()
         else:
-            self.variable_length_label_encoder = None
-        self.variable_length_feature_max_len = None
+            self.variable_length_label_encoders = None
+        self.variable_length_features_max_len = None
 
         self.vocabulary_size_dict = {}
         self.model = None
@@ -58,10 +60,11 @@ class DeepFMTrainer:
             data=train_data,
             features=self.sparse_features,
         )
-        if self.variable_length_feature:
-            self.variable_length_label_encoder.fit(
-                train_data[self.variable_length_feature],
-            )
+        if self.variable_length_features:
+            for feat in self.variable_length_features:
+                self.variable_length_label_encoders[feat].fit(
+                    train_data[feat],
+                )
         train_data = self.label_encoded_data(train_data)
 
         if self.target_label_encoder:
@@ -70,14 +73,17 @@ class DeepFMTrainer:
                 features=self.target,
             )
 
-        if self.variable_length_feature:
-            genres_length = np.array(list(map(len, train_data[self.variable_length_feature])))
-            self.variable_length_feature_max_len = max(genres_length)
+        if self.variable_length_features:
+            self.variable_length_features_max_len = {}
+            for feat in self.variable_length_features:
+                genres_length = np.array(list(map(len, train_data[feat])))
+                self.variable_length_features_max_len[feat] = min(5, max(genres_length))
 
         for feat in self.sparse_features:
             self.vocabulary_size_dict[feat] = train_data[feat].max() + 2
-        if self.variable_length_feature:
-            self.vocabulary_size_dict[self.variable_length_feature] = train_data[self.variable_length_feature].explode().max() + 1
+        if self.variable_length_features:
+            for feat in self.variable_length_features:
+                self.vocabulary_size_dict[feat] = train_data[feat].explode().max() + 1
         print('Label Encoding ...')
         print()
 
@@ -117,10 +123,11 @@ class DeepFMTrainer:
 
     def label_encoded_data(self, data):
         data = self.multi_label_encoder.transform(data)
-        if self.variable_length_feature:
-            data[self.variable_length_feature] = self.variable_length_label_encoder.transform(
-                data[self.variable_length_feature],
-            )
+        if self.variable_length_features:
+            for feat in self.variable_length_features:
+                data[feat] = self.variable_length_label_encoders[feat].transform(
+                    data[feat],
+                )
         return data
 
     def build_model(
@@ -140,17 +147,17 @@ class DeepFMTrainer:
             ) for feat in self.sparse_features
         ]
 
-        if self.variable_length_feature:
+        if self.variable_length_features:
             varlen_feature_columns = [
                 VarLenSparseFeat(
                     SparseFeat(
-                        self.variable_length_feature, 
-                        vocabulary_size=self.vocabulary_size_dict[self.variable_length_feature], 
+                        feat, 
+                        vocabulary_size=self.vocabulary_size_dict[feat], 
                         embedding_dim=embedding_dim,
                     ),
-                    maxlen=self.variable_length_feature_max_len,
+                    maxlen=self.variable_length_features_max_len[feat],
                     combiner='mean',
-                ),
+                ) for feat in self.variable_length_features
             ] 
         else:
             varlen_feature_columns = []
@@ -164,9 +171,10 @@ class DeepFMTrainer:
     
     def build_model_input(self, data):
         model_input = {name: data[name] for name in self.sparse_features}
-        if self.variable_length_feature:
-            pad_variable_length_feature = pad_sequences(
-                data[self.variable_length_feature], maxlen=self.variable_length_feature_max_len, padding='post',
-            )
-            model_input[self.variable_length_feature] = pad_variable_length_feature
+        if self.variable_length_features:
+            for feat in self.variable_length_features:
+                pad_variable_length_features = pad_sequences(
+                    data[feat], maxlen=self.variable_length_features_max_len[feat], padding='post',
+                )
+                model_input[feat] = pad_variable_length_features
         return model_input
