@@ -118,6 +118,17 @@ class DeepFMTrainer:
         test_data,
     ):
         test_data = self.label_encoded_data(test_data)
+        return self.predict_encoded_data(test_data)
+
+    def predict_encoded_data(
+        self, 
+        test_data,
+    ):
+        if isinstance(test_data, np.ndarray):
+            test_data = pd.DataFrame(test_data, columns=self.sparse_features)
+            for feat in self.variable_length_features:
+                test_data[feat] = ''
+                test_data[feat] = test_data[feat].str.split()
         model_input = self.build_model_input(test_data)
         return self.model.predict(model_input)
 
@@ -178,3 +189,64 @@ class DeepFMTrainer:
                 )
                 model_input[feat] = pad_variable_length_features
         return model_input
+
+    def test(
+        self,
+        **kargs,
+    ):
+        target_col = 'career_task'
+        data = {feat: None for feat in self.sparse_features}
+        if self.variable_length_features is not None:
+            data.update({feat: None for feat in self.variable_length_features})
+        data.pop(target_col)
+
+        data.update(**kargs)
+        data = pd.DataFrame([data])
+        if 'school_major_name' in data.columns:
+            data.loc[0, 'school_major_name'] = self.school_major_name_list(data.loc[0, 'school_major_name'])
+            data['school_major_name'] = data['school_major_name'].str.split(',')
+
+        data = data.merge(
+            right=self.target_df,
+            left_index=True,
+            right_index=True,
+        )
+        data['predict'] = self.predict(data)
+        result = data.iloc[
+            data.reset_index().groupby('index')['predict'].idxmax().tolist()[0]
+        ]
+        return result[target_col]
+
+    @property
+    def target_df(
+        self
+    ):
+        career_task = [
+            '인사관리', '금융', '소프트웨어엔지니어', '콘텐츠제작', '광고기획자', '연구원',
+            'UX/UI디자이너', '디자이너', '교육', '기획/PM', '웹개발자', '풀스택개발자', '데이터사이언티스트',
+            '마케팅', '대표이사', '경영지원', '행정및경영지원', '비즈니스', '운영', 'SW 개발', '매니저',
+            '영업관리', '프론트엔드개발자', '기자', '백엔드개발자', '회계및재무관리',
+            'Researcher/Analyst', '그래픽디자이너', '품질관리', 'IOS개발자', '통번역', '투자',
+            '에디터', '팀원', '디자인', '컨설턴트', '법무', '서비스운영', 'cmo', '엔지니어', '작가',
+            '하드웨어엔지니어', '보안관리', 'associate', '무역', 'accountexecutive', '게임 개발',
+            'HW 개발', '기계', '조교', '생산관리', '고객상담', '바리스타'
+       ]
+        df = pd.DataFrame({'career_task': career_task}, index=[0] * len(career_task))
+        return df
+
+    def school_major_name_list(
+        self,
+        major_name
+    ):
+        sections = [
+            '경영', '컴퓨터', '디자인', '정보', '전자', '산업', '경제', '영어', '언어', '소프트웨어', '시각',
+           '국제', '미디어', '전기', '통신', '기계', '국어', '문화', '사회', '영상', '시스템', '교육',
+           '광고', '디지털', '방송', '홍보', '심리', '관광', '콘텐츠', '관리', '통계', '행정', '건축',
+           '예술', '커뮤니케이션', '신문', '통상', '환경', '금융', '정치', '마케팅', '언론', '수학', '무역',
+           '글로벌', '생명', '법학', '멀티미디어', '물리', '화학'
+        ]
+        major_list = []
+        for section in sections:
+            if section in major_name:
+                major_list += [section]
+        return ','.join(major_list)
