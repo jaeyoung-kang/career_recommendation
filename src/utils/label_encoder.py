@@ -64,13 +64,30 @@ class MultiFeatureLabelEncoder(FeatureLabelEncoder):
                 encoder=encoder,
                 unknown=unknown,
             )
-            data[feature] = encoder.transform(data[feature]) + 1
+            data[feature] = encoder.transform(data[feature])
         return data
     
     def inverse_transform(self, data):
         data = data.copy()
         for feature, encoder in self._encoders.items():
-            data[feature] = encoder.inverse_transform(data[feature] - 1)
+            data[feature] = encoder.inverse_transform(data[feature])
+        return data
+
+    def uni_feature_transform(self, data, feature):
+        if isinstance(data, np.ndarray):
+            data = pd.DataFrame(data, columns=[feature])
+        elif isinstance(data, pd.Series):
+            data = data.to_frame()
+        data = data.copy()
+        encoder = self._encoders[feature]
+        unknown = self._unknowns[feature]
+        data = self.fillna(data).iloc[:, 0]
+        data = self._change_unknown_value(
+            series=data,
+            encoder=encoder,
+            unknown=unknown,
+        )
+        data = encoder.transform(data)
         return data
 
 
@@ -127,7 +144,7 @@ class VariableLenghthLabelEncoder(FeatureLabelEncoder):
             encoder=self._encoder,
             unknown=self._unknown,
         )
-        transformed_series = self._encoder.transform(series) + 1
+        transformed_series = self._encoder.transform(series)
         transformed_series = pd.Series(
             data=transformed_series,
             index=index,
@@ -145,7 +162,7 @@ class VariableLenghthLabelEncoder(FeatureLabelEncoder):
         name = series.name
 
         series = pd.to_numeric(series)
-        transformed_series = self._encoder.inverse_transform(series - 1)
+        transformed_series = self._encoder.inverse_transform(series)
         transformed_series = pd.Series(
             data=transformed_series,
             index=index,
