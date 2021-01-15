@@ -199,23 +199,36 @@ class DeepFMTrainer:
         if self.variable_length_features is not None:
             data.update({feat: None for feat in self.variable_length_features})
         data.pop(target_col)
+        data.pop('enterprise_size')
 
         data.update(**kargs)
         data = pd.DataFrame([data])
-        if 'school_major_name' in data.columns:
-            data.loc[0, 'school_major_name'] = self.school_major_name_list(data.loc[0, 'school_major_name'])
-            data['school_major_name'] = data['school_major_name'].str.split(',')
 
         data = data.merge(
             right=self.target_df,
             left_index=True,
             right_index=True,
         )
+        data['enterprise_size'] = '대기업,중소기업,스타트업'
+        data['enterprise_size'] = data['enterprise_size'].str.split(',')
+        data = data.explode('enterprise_size')
+
+        if 'school_major_name' in data.columns:
+            data.loc[0, 'school_major_name'] = self.school_major_name_list(data.loc[0, 'school_major_name'])
+            data['school_major_name'] = data['school_major_name'].str.split(',')
+        if 'skill' in data.columns:
+            data['skill'] = data['skill'].fillna('')
+            data['skill'] = data['skill'].str.split(',')
+
         data['predict'] = self.predict(data)
-        result = data.iloc[
-            data.reset_index().groupby('index')['predict'].idxmax().tolist()[0]
+        
+        task_result = data#.sort_values('predict')
+        # task_result = task_result.drop_duplicates(subset=['career_task'], keep='first')
+        task_result = task_result.reset_index().loc[
+            task_result.reset_index().groupby('index')['predict'].nlargest(10).reset_index()['level_1'].tolist()
         ]
-        return result[target_col]
+        task_result = task_result.sample(frac=1).reset_index(drop=True)
+        return task_result[target_col].iloc[0], task_result['enterprise_size'].iloc[0]
 
     @property
     def target_df(
