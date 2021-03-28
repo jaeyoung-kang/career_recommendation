@@ -1,0 +1,32 @@
+1. 아나콘다 설치 https://docs.anaconda.com/anaconda/install/ 이때 설치시 add to path 체크
+
+2. 바탕화면에서 진행하기 위해 경로 이동
+
+3. 가상환경 만들기 conda create -n server python=3.6.9 anaconda
+
+4. 가상환경 활성화 conda activate server
+
+5. 파이토치와 CUDA 설치 conda install pytorch==1.3.0 cudatoolkit=10.1 -c pytorch
+
+6. 나머지 패키지 설치 conda env create -f conda_requirements.txt
+
+python run.py --templates train_bert --mode tobigs_test --pretrained_weights dummy_experiments/play/play20210110_64/models/best_model.pth  --max_len 12 --hidden_units 64 --input_future_seq "중소기업 마케팅"
+
+python run.py --templates train_bert --mode tobigs_test --pretrained_weights dummy_experiments/play/play20210110_64/models/best_model.pth  --max_len 12 --hidden_units 64 --input_middle_seq "전문대 컴퓨터 석사" "중국어 원어민 수준" --input_middle_target "대기업 연구원" --input_middle_num 3
+
+python run.py --templates train_bert --mode tobigs_test --pretrained_weights dummy_experiments/play/play20210115_128_final/models/best_model.pth --max_len 42 --hidden_units 128 --input_middle_seq "서울1 경제" --input_middle_num 5 --input_middle_target "대기업 금융"
+
+여기까지 하면 Bert4Rec이 server2라는 가상환경에서 동작
+
+conda install dill
+conda install tensorflow
+
+career_server.py에 from tensorflow import keras 추가
+
+pip install deepctr-torch
+
+conda install scikit-learn==0.24.0
+
+여기까지 하면 DeepFM이 server2라는 가상환경에서 동작함
+
+* 파이썬 파일에서 코맨드 실행 https://stackabuse.com/executing-shell-commands-with-python/
